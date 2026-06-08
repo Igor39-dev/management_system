@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import uvicorn
+
+from backend.src.database import check_db_connection
 
 
 app = FastAPI(
@@ -7,6 +9,13 @@ app = FastAPI(
     description="API для управления бизнесном"
 )
 
+@app.get("/health", tags=["Check DB connection"])
+async def health_check():
+
+    db_ok = await check_db_connection()
+    if not db_ok:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
