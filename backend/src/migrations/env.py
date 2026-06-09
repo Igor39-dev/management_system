@@ -12,7 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.src.config import settings
 from backend.src.database import Base
-from backend.src.models.users import UserOrm
+import backend.src.models  # регистрация всех моделей в metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
