@@ -5,6 +5,7 @@ from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.src.database import session as session_factory
+from backend.src.models.enums import UserRole
 from backend.src.models.users import UserOrm
 from backend.src.services.auth import AuthService
 
@@ -45,3 +46,15 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[UserOrm, Depends(get_current_user)]
+
+
+async def get_current_admin(current_user: CurrentUser) -> UserOrm:
+    if current_user.role != UserRole.ADMIN and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав",
+        )
+    return current_user
+
+
+CurrentAdmin = Annotated[UserOrm, Depends(get_current_admin)]
