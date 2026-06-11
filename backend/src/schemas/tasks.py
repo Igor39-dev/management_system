@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.src.models.enums import TaskStatus
+from backend.src.schemas.types import ApiDateTime
 
 
 def _to_naive_utc(value: datetime | None) -> datetime | None:
@@ -38,6 +39,12 @@ class TaskUpdate(BaseModel):
     def normalize_deadline(cls, value: datetime | None) -> datetime | None:
         return _to_naive_utc(value)
 
+    @model_validator(mode="after")
+    def validate_update(self) -> "TaskUpdate":
+        if not self.model_fields_set:
+            raise ValueError("Не указаны поля для обновления")
+        return self
+
 
 class TaskGet(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -46,12 +53,12 @@ class TaskGet(BaseModel):
     title: str
     description: str | None
     status: TaskStatus
-    deadline: datetime | None
+    deadline: ApiDateTime | None
     team_id: int
     creator_id: int
     assignee_id: int | None
-    created_at: datetime
-    updated_at: datetime
+    created_at: ApiDateTime
+    updated_at: ApiDateTime
 
 
 class TaskCommentCreate(BaseModel):
@@ -65,5 +72,5 @@ class TaskCommentGet(BaseModel):
     task_id: int
     author_id: int
     text: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: ApiDateTime
+    updated_at: ApiDateTime

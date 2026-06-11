@@ -1,6 +1,6 @@
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
+
+from backend.src.schemas.types import ApiDateTime
 
 
 class EvaluationCreate(BaseModel):
@@ -18,5 +18,5 @@ class EvaluationGet(BaseModel):
     task_id: int
     evaluator_id: int
     score: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: ApiDateTime
+    updated_at: ApiDateTime

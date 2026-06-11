@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.src.models.enums import TaskStatus
 from backend.src.models.tasks import TaskOrm
 from backend.src.models.users import UserOrm
-from backend.src.schemas.tasks import TaskCreate
+from backend.src.schemas.tasks import TaskCreate, TaskUpdate
 from backend.src.services.teams import MemberNotFoundError, TeamService
 
 
@@ -95,4 +95,46 @@ class TaskService:
         if not TeamService.can_access_team(user, team):
             raise TaskAccessDeniedError
 
+        return task
+
+    @classmethod
+    async def update(
+        cls,
+        db: AsyncSession,
+        user: UserOrm,
+        task_id: int,
+        data: TaskUpdate,
+    ) -> TaskOrm:
+        task = await cls.get_task(db, user, task_id)
+
+        team = await TeamService.get_by_id(db, task.team_id)
+        if team is None:
+            raise TaskNotFoundError
+
+        update_data = data.model_dump(exclude_unset=True)
+        if not update_data:
+            return task
+
+        can_manage = TeamService.can_manage_team(user, team)
+        is_assignee = task.assignee_id == user.id
+
+        if can_manage:
+            assignee_id = update_data.get("assignee_id")
+            if assignee_id is not None:
+                try:
+                    await TeamService._get_team_member(db, task.team_id, assignee_id)
+                except MemberNotFoundError:
+                    raise AssigneeNotInTeamError
+
+            for field, value in update_data.items():
+                setattr(task, field, value)
+        elif is_assignee:
+            if set(update_data.keys()) - {"status"}:
+                raise TaskAccessDeniedError
+            task.status = update_data["status"]
+        else:
+            raise TaskAccessDeniedError
+
+        await db.commit()
+        await db.refresh(task)
         return task

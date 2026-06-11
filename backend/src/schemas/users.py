@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from backend.src.models.enums import UserRole
+from backend.src.schemas.types import ApiDateTime
 
 
 class UserBase(BaseModel):
@@ -62,5 +61,5 @@ class UserGet(BaseModel):
     team_id: int | None
     is_active: bool
     is_verified: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: ApiDateTime
+    updated_at: ApiDateTime

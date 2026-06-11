@@ -3,6 +3,8 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from backend.src.schemas.types import ApiDateTime
+
 
 class MeetingBase(BaseModel):
     title: str = Field(min_length=1, max_length=255)
@@ -45,13 +47,13 @@ class MeetingGet(BaseModel):
     id: int
     title: str
     description: str | None
-    start_at: datetime
-    end_at: datetime
+    start_at: ApiDateTime
+    end_at: ApiDateTime
     is_cancelled: bool
     team_id: int
     organizer_id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: ApiDateTime
+    updated_at: ApiDateTime
 
 
 class MeetingGetDetail(MeetingGet):
