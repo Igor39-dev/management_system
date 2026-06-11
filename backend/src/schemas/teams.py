@@ -44,3 +44,7 @@ class TeamMemberGet(BaseModel):
 
 class TeamGetDetail(TeamGet):
     members: list[TeamMemberGet]
+
+
+class TeamMemberRoleUpdate(BaseModel):
+    role: UserRole

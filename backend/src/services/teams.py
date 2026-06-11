@@ -8,6 +8,7 @@ from backend.src.models.enums import UserRole
 from backend.src.models.teams import TeamOrm
 from backend.src.models.users import UserOrm
 from backend.src.schemas.teams import TeamCreate
+from backend.src.services.auth import AuthService
 
 
 class TeamNotFoundError(Exception):
@@ -19,6 +20,18 @@ class AlreadyInTeamError(Exception):
 
 
 class TeamAccessDeniedError(Exception):
+    pass
+
+
+class MemberNotFoundError(Exception):
+    pass
+
+
+class CannotRemoveOwnerError(Exception):
+    pass
+
+
+class CannotAssignRoleError(Exception):
     pass
 
 
@@ -58,6 +71,26 @@ class TeamService:
         return user.team_id == team.id
 
     @classmethod
+    def can_manage_team(cls, user: UserOrm, team: TeamOrm) -> bool:
+        if user.role == UserRole.ADMIN or user.is_superuser:
+            return True
+        if team.owner_id == user.id:
+            return True
+        return user.team_id == team.id and user.role == UserRole.MANAGER
+
+    @classmethod
+    async def _get_team_member(
+        cls,
+        db: AsyncSession,
+        team_id: int,
+        member_id: int,
+    ) -> UserOrm:
+        member = await AuthService.get_user_by_id(db, member_id)
+        if member is None or member.team_id != team_id or not member.is_active:
+            raise MemberNotFoundError
+        return member
+
+    @classmethod
     async def get_members(cls, db: AsyncSession, team_id: int) -> list[UserOrm]:
         result = await db.execute(
             select(UserOrm).where(UserOrm.team_id == team_id, UserOrm.is_active.is_(True)),
@@ -84,6 +117,57 @@ class TeamService:
     async def get_by_code(cls, db: AsyncSession, code: str) -> TeamOrm | None:
         result = await db.execute(select(TeamOrm).where(TeamOrm.code == code))
         return result.scalar_one_or_none()
+
+    @classmethod
+    async def remove_member(
+        cls,
+        db: AsyncSession,
+        actor: UserOrm,
+        team_id: int,
+        member_id: int,
+    ) -> None:
+        team = await cls.get_by_id(db, team_id)
+        if team is None:
+            raise TeamNotFoundError
+        if not cls.can_manage_team(actor, team):
+            raise TeamAccessDeniedError
+
+        member = await cls._get_team_member(db, team_id, member_id)
+        if member.id == team.owner_id:
+            raise CannotRemoveOwnerError
+
+        member.team_id = None
+        member.role = UserRole.USER
+        await db.commit()
+
+    @classmethod
+    async def assign_role(
+        cls,
+        db: AsyncSession,
+        actor: UserOrm,
+        team_id: int,
+        member_id: int,
+        role: UserRole,
+    ) -> UserOrm:
+        team = await cls.get_by_id(db, team_id)
+        if team is None:
+            raise TeamNotFoundError
+        if not cls.can_manage_team(actor, team):
+            raise TeamAccessDeniedError
+
+        if role == UserRole.ADMIN and actor.role != UserRole.ADMIN and not actor.is_superuser:
+            raise CannotAssignRoleError
+
+        member = await cls._get_team_member(db, team_id, member_id)
+
+        if member.id == team.owner_id and actor.id != team.owner_id:
+            if actor.role != UserRole.ADMIN and not actor.is_superuser:
+                raise CannotAssignRoleError
+
+        member.role = role
+        await db.commit()
+        await db.refresh(member)
+        return member
 
     @classmethod
     async def join_by_code(
