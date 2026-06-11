@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 
 from backend.src.api.dependencies import CurrentUser, DBDep
 from backend.src.models.enums import TaskStatus
-from backend.src.models.tasks import TaskOrm
-from backend.src.schemas.tasks import TaskCreate, TaskGet, TaskUpdate
+from backend.src.models.tasks import TaskCommentOrm, TaskOrm
+from backend.src.schemas.tasks import TaskCommentCreate, TaskCommentGet, TaskCreate, TaskGet, TaskUpdate
 from backend.src.services.tasks import AssigneeNotInTeamError, NotInTeamError, TaskAccessDeniedError, TaskNotFoundError, TaskService
 
 
@@ -59,6 +59,51 @@ async def update_task(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для изменения задачи")
     except AssigneeNotInTeamError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Исполнитель не найден в команде задачи")
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_200_OK)
+async def delete_task(
+    task_id: int,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> dict[str, str]:
+    try:
+        await TaskService.delete(db, current_user, task_id)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    except TaskAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для удаления задачи")
+
+    return {"detail": "Задача удалена"}
+
+
+@router.get("/{task_id}/comments", response_model=list[TaskCommentGet])
+async def list_task_comments(
+    task_id: int,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> list[TaskCommentOrm]:
+    try:
+        return await TaskService.list_comments(db, current_user, task_id)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    except TaskAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой задаче")
+
+
+@router.post("/{task_id}/comments", response_model=TaskCommentGet, status_code=status.HTTP_201_CREATED)
+async def add_task_comment(
+    task_id: int,
+    data: TaskCommentCreate,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> TaskCommentOrm:
+    try:
+        return await TaskService.add_comment(db, current_user, task_id, data)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    except TaskAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой задаче")
 
 
 @router.post("", response_model=TaskGet, status_code=status.HTTP_201_CREATED)

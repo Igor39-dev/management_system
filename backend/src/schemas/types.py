@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import PlainSerializer
 
-_DATETIME_FORMAT = "%Y-%m-%d | %H:%M"
+_DATETIME_FORMAT = "%Y-%m-%d; %H:%M"
 
 
 def format_api_datetime(value: datetime) -> str:

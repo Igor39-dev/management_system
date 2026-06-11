@@ -2,9 +2,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.src.models.enums import TaskStatus
-from backend.src.models.tasks import TaskOrm
+from backend.src.models.tasks import TaskCommentOrm, TaskOrm
 from backend.src.models.users import UserOrm
-from backend.src.schemas.tasks import TaskCreate, TaskUpdate
+from backend.src.schemas.tasks import TaskCommentCreate, TaskCreate, TaskUpdate
 from backend.src.services.teams import MemberNotFoundError, TeamService
 
 
@@ -138,3 +138,54 @@ class TaskService:
         await db.commit()
         await db.refresh(task)
         return task
+
+    @classmethod
+    async def delete(cls, db: AsyncSession, user: UserOrm, task_id: int) -> None:
+        task = await cls.get_task(db, user, task_id)
+
+        team = await TeamService.get_by_id(db, task.team_id)
+        if team is None:
+            raise TaskNotFoundError
+
+        if not TeamService.can_manage_team(user, team):
+            raise TaskAccessDeniedError
+
+        await db.delete(task)
+        await db.commit()
+
+    @classmethod
+    async def list_comments(
+        cls,
+        db: AsyncSession,
+        user: UserOrm,
+        task_id: int,
+    ) -> list[TaskCommentOrm]:
+        await cls.get_task(db, user, task_id)
+
+        stmt = (
+            select(TaskCommentOrm)
+            .where(TaskCommentOrm.task_id == task_id)
+            .order_by(TaskCommentOrm.created_at.asc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    @classmethod
+    async def add_comment(
+        cls,
+        db: AsyncSession,
+        user: UserOrm,
+        task_id: int,
+        data: TaskCommentCreate,
+    ) -> TaskCommentOrm:
+        await cls.get_task(db, user, task_id)
+
+        comment = TaskCommentOrm(
+            task_id=task_id,
+            author_id=user.id,
+            text=data.text,
+        )
+        db.add(comment)
+        await db.commit()
+        await db.refresh(comment)
+        return comment
