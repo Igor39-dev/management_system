@@ -20,6 +20,10 @@ class AssigneeNotInTeamError(Exception):
     pass
 
 
+class TaskNotFoundError(Exception):
+    pass
+
+
 class TaskService:
     @classmethod
     async def create(cls, db: AsyncSession, creator: UserOrm, data: TaskCreate) -> TaskOrm:
@@ -77,3 +81,18 @@ class TaskService:
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    @classmethod
+    async def get_task(cls, db: AsyncSession, user: UserOrm, task_id: int) -> TaskOrm:
+        task = await db.get(TaskOrm, task_id)
+        if task is None:
+            raise TaskNotFoundError
+
+        team = await TeamService.get_by_id(db, task.team_id)
+        if team is None:
+            raise TaskNotFoundError
+
+        if not TeamService.can_access_team(user, team):
+            raise TaskAccessDeniedError
+
+        return task
