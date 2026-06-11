@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from backend.src.api.auth import router as auth_router
 from backend.src.api.dependencies import DBDep
+from backend.src.api.teams import router as teams_router
 
 
 app = FastAPI(
@@ -12,6 +13,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(teams_router)
 
 
 @app.get("/health", tags=["Check DB connection"])
