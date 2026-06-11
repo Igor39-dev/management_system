@@ -3,8 +3,9 @@ from fastapi import APIRouter, HTTPException, Response, status
 from backend.src.api.dependencies import CurrentUser, DBDep
 from backend.src.config import settings
 from backend.src.models.users import UserOrm
-from backend.src.schemas.users import UserCreate, UserGet, UserLogin
+from backend.src.schemas.users import UserCreate, UserGet, UserLogin, UserProfileDelete, UserProfileUpdate
 from backend.src.services.auth import AuthService, EmailAlreadyRegisteredError, InvalidCredentialsError
+from backend.src.services.users import InvalidCurrentPasswordError, UserService
 
 
 router = APIRouter(prefix="/auth", tags=["Авторизация и аутентификация"])
@@ -53,6 +54,45 @@ async def login(data: UserLogin, db: DBDep, response: Response) -> UserOrm:
 @router.get("/me", response_model=UserGet)
 async def get_me(current_user: CurrentUser) -> UserOrm:
     return current_user
+
+
+@router.patch("/me", response_model=UserGet)
+async def update_profile(
+    data: UserProfileUpdate,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> UserOrm:
+    try:
+        return await UserService.update_profile(db, current_user, data)
+    except InvalidCurrentPasswordError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неверный пароль",
+        )
+    except EmailAlreadyRegisteredError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пользователь с таким email уже зарегистрирован",
+        )
+
+
+@router.delete("/me", status_code=status.HTTP_200_OK)
+async def delete_account(
+    data: UserProfileDelete,
+    current_user: CurrentUser,
+    db: DBDep,
+    response: Response,
+) -> dict[str, str]:
+    try:
+        await UserService.delete_account(db, current_user, data.current_password)
+    except InvalidCurrentPasswordError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неверный пароль",
+        )
+
+    response.delete_cookie(key=AuthService.cookie_name)
+    return {"detail": "Аккаунт удалён"}
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

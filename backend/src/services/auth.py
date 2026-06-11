@@ -61,7 +61,7 @@ class AuthService:
     @classmethod
     async def register(cls, db: AsyncSession, data: UserCreate) -> UserOrm:
         existing_user = await cls.get_user_by_email(db, data.email)
-        if existing_user is not None:
+        if existing_user is not None and existing_user.is_active:
             raise EmailAlreadyRegisteredError
 
         user = UserOrm(

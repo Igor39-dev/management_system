@@ -2,7 +2,7 @@ from backend.src.schemas.evaluations import EvaluationCreate, EvaluationGet, Eva
 from backend.src.schemas.meetings import MeetingBase, MeetingCreate, MeetingGet, MeetingGetDetail, MeetingUpdate
 from backend.src.schemas.tasks import TaskBase, TaskCommentCreate, TaskCommentGet, TaskCreate, TaskGet, TaskUpdate
 from backend.src.schemas.teams import TeamBase, TeamCreate, TeamGet, TeamJoin, TeamUpdate
-from backend.src.schemas.users import UserBase, UserCreate, UserGet, UserLogin, UserUpdate
+from backend.src.schemas.users import UserBase, UserCreate, UserGet, UserLogin, UserProfileDelete, UserProfileUpdate
 
 __all__ = [
     "EvaluationCreate",
@@ -28,5 +28,6 @@ __all__ = [
     "UserCreate",
     "UserGet",
     "UserLogin",
-    "UserUpdate",
+    "UserProfileDelete",
+    "UserProfileUpdate",
 ]
