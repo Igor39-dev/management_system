@@ -5,16 +5,7 @@ from backend.src.models.teams import TeamOrm
 from backend.src.models.users import UserOrm
 from backend.src.schemas.teams import TeamCreate, TeamGet, TeamGetDetail, TeamJoin, TeamMemberRoleUpdate
 from backend.src.schemas.users import UserGet
-from backend.src.services.teams import (
-    AlreadyInTeamError,
-    CannotAssignRoleError,
-    CannotRemoveOwnerError,
-    MemberNotFoundError,
-    TeamAccessDeniedError,
-    TeamNotFoundError,
-    TeamService,
-)
-
+from backend.src.services.teams import AlreadyInTeamError, TeamAccessDeniedError, TeamNotFoundError, TeamService, CannotAssignRoleError, CannotRemoveOwnerError, MemberNotFoundError
 
 router = APIRouter(prefix="/teams", tags=["Команды"])
 
@@ -118,7 +109,7 @@ async def assign_member_role(
         )
 
 
-@router.post("/join", response_model=UserGet)
+@router.post("/join", response_model=UserGet, summary="Join to team")
 async def join_team(
     data: TeamJoin,
     current_user: CurrentUser,

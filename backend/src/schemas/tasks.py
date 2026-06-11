@@ -1,14 +1,25 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.src.models.enums import TaskStatus
+
+
+def _to_naive_utc(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
 
 
 class TaskBase(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     deadline: datetime | None = None
+
+    @field_validator("deadline", mode="after")
+    @classmethod
+    def normalize_deadline(cls, value: datetime | None) -> datetime | None:
+        return _to_naive_utc(value)
 
 
 class TaskCreate(TaskBase):
@@ -21,6 +32,11 @@ class TaskUpdate(BaseModel):
     status: TaskStatus | None = None
     deadline: datetime | None = None
     assignee_id: int | None = None
+
+    @field_validator("deadline", mode="after")
+    @classmethod
+    def normalize_deadline(cls, value: datetime | None) -> datetime | None:
+        return _to_naive_utc(value)
 
 
 class TaskGet(BaseModel):
