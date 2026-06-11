@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from backend.src.models.enums import UserRole
 
 
 class TeamBase(BaseModel):
@@ -28,3 +30,17 @@ class TeamGet(BaseModel):
     owner_id: int
     created_at: datetime
     updated_at: datetime
+
+
+class TeamMemberGet(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr
+    first_name: str | None
+    last_name: str | None
+    role: UserRole
+
+
+class TeamGetDetail(TeamGet):
+    members: list[TeamMemberGet]

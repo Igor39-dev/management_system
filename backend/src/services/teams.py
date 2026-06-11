@@ -4,6 +4,7 @@ import string
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.src.models.enums import UserRole
 from backend.src.models.teams import TeamOrm
 from backend.src.models.users import UserOrm
 from backend.src.schemas.teams import TeamCreate
@@ -14,6 +15,10 @@ class TeamNotFoundError(Exception):
 
 
 class AlreadyInTeamError(Exception):
+    pass
+
+
+class TeamAccessDeniedError(Exception):
     pass
 
 
@@ -41,6 +46,41 @@ class TeamService:
         return team
 
     @classmethod
+    async def get_by_id(cls, db: AsyncSession, team_id: int) -> TeamOrm | None:
+        return await db.get(TeamOrm, team_id)
+
+    @classmethod
+    def can_access_team(cls, user: UserOrm, team: TeamOrm) -> bool:
+        if user.role == UserRole.ADMIN or user.is_superuser:
+            return True
+        if team.owner_id == user.id:
+            return True
+        return user.team_id == team.id
+
+    @classmethod
+    async def get_members(cls, db: AsyncSession, team_id: int) -> list[UserOrm]:
+        result = await db.execute(
+            select(UserOrm).where(UserOrm.team_id == team_id, UserOrm.is_active.is_(True)),
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_team_detail(
+        cls,
+        db: AsyncSession,
+        user: UserOrm,
+        team_id: int,
+    ) -> tuple[TeamOrm, list[UserOrm]]:
+        team = await cls.get_by_id(db, team_id)
+        if team is None:
+            raise TeamNotFoundError
+        if not cls.can_access_team(user, team):
+            raise TeamAccessDeniedError
+
+        members = await cls.get_members(db, team_id)
+        return team, members
+
+    @classmethod
     async def get_by_code(cls, db: AsyncSession, code: str) -> TeamOrm | None:
         result = await db.execute(select(TeamOrm).where(TeamOrm.code == code))
         return result.scalar_one_or_none()
@@ -61,4 +101,5 @@ class TeamService:
 
         user.team_id = team.id
         await db.commit()
+        await db.refresh(user)
         return user
