@@ -5,6 +5,7 @@ from sqlalchemy import text
 from backend.src.api.auth import router as auth_router
 from backend.src.api.dependencies import DBDep
 from backend.src.api.evaluations import router as evaluations_router
+from backend.src.api.meetings import router as meetings_router
 from backend.src.api.tasks import router as tasks_router
 from backend.src.api.teams import router as teams_router
 
@@ -18,6 +19,7 @@ app.include_router(auth_router)
 app.include_router(teams_router)
 app.include_router(tasks_router)
 app.include_router(evaluations_router)
+app.include_router(meetings_router)
 
 
 @app.get("/health", tags=["Check DB connection"])

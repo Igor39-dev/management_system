@@ -34,10 +34,9 @@ class MeetingUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_time_range(self) -> Self:
-        if self.start_at is not None and self.end_at is not None:
-            if self.end_at <= self.start_at:
-                msg = "end_at must be later than start_at"
-                raise ValueError(msg)
+        if self.start_at is not None and self.end_at is not None and self.end_at <= self.start_at:
+            msg = "Окончание встречи должно быть позже начала"
+            raise ValueError(msg)
         return self
 
 
