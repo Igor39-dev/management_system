@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 
 from backend.src.api.auth import router as auth_router
+from backend.src.api.calendar import router as calendar_router
 from backend.src.api.dependencies import DBDep
 from backend.src.api.evaluations import router as evaluations_router
 from backend.src.api.meetings import router as meetings_router
@@ -20,6 +21,7 @@ app.include_router(teams_router)
 app.include_router(tasks_router)
 app.include_router(evaluations_router)
 app.include_router(meetings_router)
+app.include_router(calendar_router)
 
 
 @app.get("/health", tags=["Check DB connection"])

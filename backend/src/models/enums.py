@@ -18,3 +18,8 @@ class TaskStatus(StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     DONE = "done"
+
+
+class CalendarEventType(StrEnum):
+    TASK = "task"
+    MEETING = "meeting"
