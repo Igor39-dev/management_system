@@ -1,12 +1,36 @@
 from fastapi import APIRouter, HTTPException, status
 
 from backend.src.api.dependencies import CurrentUser, DBDep
+from backend.src.models.enums import TaskStatus
 from backend.src.models.tasks import TaskOrm
 from backend.src.schemas.tasks import TaskCreate, TaskGet
 from backend.src.services.tasks import AssigneeNotInTeamError, NotInTeamError, TaskAccessDeniedError, TaskService
 
 
 router = APIRouter(prefix="/tasks", tags=["Задачи"])
+
+
+@router.get("", response_model=list[TaskGet])
+async def list_tasks(
+    current_user: CurrentUser,
+    db: DBDep,
+    status: TaskStatus | None = None,
+    assignee_id: int | None = None,
+    assigned_to_me: bool = False,
+) -> list[TaskOrm]:
+    try:
+        return await TaskService.list_tasks(
+            db,
+            current_user,
+            status=status,
+            assignee_id=assignee_id,
+            assigned_to_me=assigned_to_me,
+        )
+    except NotInTeamError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Вы не состоите в команде",
+        )
 
 
 @router.post("", response_model=TaskGet, status_code=status.HTTP_201_CREATED)
