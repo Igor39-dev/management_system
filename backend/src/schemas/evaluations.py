@@ -20,3 +20,8 @@ class EvaluationGet(BaseModel):
     score: int
     created_at: ApiDateTime
     updated_at: ApiDateTime
+
+
+class EvaluationAverage(BaseModel):
+    average_score: float | None
+    count: int

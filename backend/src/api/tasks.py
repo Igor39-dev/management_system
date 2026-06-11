@@ -3,7 +3,10 @@ from fastapi import APIRouter, HTTPException, status
 from backend.src.api.dependencies import CurrentUser, DBDep
 from backend.src.models.enums import TaskStatus
 from backend.src.models.tasks import TaskCommentOrm, TaskOrm
+from backend.src.models.evaluations import EvaluationOrm
+from backend.src.schemas.evaluations import EvaluationCreate, EvaluationGet, EvaluationUpdate
 from backend.src.schemas.tasks import TaskCommentCreate, TaskCommentGet, TaskCreate, TaskGet, TaskUpdate
+from backend.src.services.evaluations import EvaluationAccessDeniedError, EvaluationAlreadyExistsError, EvaluationNotFoundError, EvaluationService
 from backend.src.services.tasks import AssigneeNotInTeamError, NotInTeamError, TaskAccessDeniedError, TaskNotFoundError, TaskService
 
 
@@ -104,6 +107,60 @@ async def add_task_comment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
     except TaskAccessDeniedError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой задаче")
+
+
+@router.get("/{task_id}/evaluation", response_model=EvaluationGet)
+async def get_task_evaluation(
+    task_id: int,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> EvaluationOrm:
+    try:
+        return await EvaluationService.get_for_task(db, current_user, task_id)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    except TaskAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой задаче")
+    except EvaluationNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Оценка для задачи не найдена")
+
+
+@router.post("/{task_id}/evaluation", response_model=EvaluationGet, status_code=status.HTTP_201_CREATED)
+async def create_task_evaluation(
+    task_id: int,
+    data: EvaluationCreate,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> EvaluationOrm:
+    try:
+        return await EvaluationService.create(db, current_user, task_id, data)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    except TaskAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой задаче")
+    except EvaluationAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для оценки задачи")
+    except EvaluationAlreadyExistsError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Задача уже оценена")
+
+
+@router.patch("/{task_id}/evaluation", response_model=EvaluationGet)
+async def update_task_evaluation(
+    task_id: int,
+    data: EvaluationUpdate,
+    current_user: CurrentUser,
+    db: DBDep,
+) -> EvaluationOrm:
+    try:
+        return await EvaluationService.update(db, current_user, task_id, data)
+    except TaskNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    except TaskAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой задаче")
+    except EvaluationAccessDeniedError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для изменения оценки")
+    except EvaluationNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Оценка для задачи не найдена")
 
 
 @router.post("", response_model=TaskGet, status_code=status.HTTP_201_CREATED)
