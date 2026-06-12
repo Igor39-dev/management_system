@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 
+from backend.src.admin import setup_admin
 from backend.src.api.auth import router as auth_router
 from backend.src.api.calendar import router as calendar_router
 from backend.src.api.dependencies import DBDep
@@ -15,6 +16,8 @@ app = FastAPI(
     title="Management System",
     description="API для управления бизнесном",
 )
+
+setup_admin(app)
 
 app.include_router(auth_router)
 app.include_router(teams_router)
